@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useState } from 'react';
+import { useState, useEffect } from "react";
 import { Input } from './ui/input';
 import { Camera, Search, Upload } from 'lucide-react';
 import { Button } from './ui/button';
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
+import useFetch from '@/hooks/use-fetch';
+import { processImageSearch } from '@/action/home';
 
 export function HomeSearch() {
 
@@ -16,6 +18,39 @@ export function HomeSearch() {
   const [isUploading, setIsUploading] = useState(false);
   const [isImageSearchActive, setIsImageSearchActive] = useState(false);
   const router = useRouter();
+
+  // Use the useFetch hook for image processing
+  const {
+    loading: isProcessing,
+    fn: processImageFn,
+    data: processResult,
+    error: processError,
+  } = useFetch(processImageSearch);
+
+   // Handle process result and errors with useEffect
+  useEffect(() => {
+    if (processResult?.success) {
+      const params = new URLSearchParams();
+
+      // Add extracted params to the search
+      if (processResult.data.make) params.set("make", processResult.data.make);
+      if (processResult.data.bodyType)
+        params.set("bodyType", processResult.data.bodyType);
+      if (processResult.data.color)
+        params.set("color", processResult.data.color);
+
+      // Redirect to search results
+      router.push(`/cars?${params.toString()}`);
+    }
+  }, [processResult, router]);
+
+  useEffect(() => {
+    if (processError) {
+      toast.error(
+        "Failed to analyze image: " + (processError.message || "Unknown error")
+      );
+    }
+  }, [processError]);
 
   const handleTextSearch = (e) => {
     e.preventDefault();
@@ -33,7 +68,9 @@ export function HomeSearch() {
       return;
     }
 
-    // we will add ai logic later
+    // Use the processImageFn from useFetch hook
+    await processImageFn(searchImage);
+
   };
 
   // ✅ Define separately
@@ -152,10 +189,14 @@ export function HomeSearch() {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={isUploading}
+                disabled={isUploading || isProcessing}
               >
-                {isUploading ? "Uploading..." : "Search with this Image"}
-              </Button>
+                {isUploading
+                  ? "Uploading..."
+                  : isProcessing
+                  ? "Analyzing image..."
+                  : "Search with this Image"} 
+                </Button>
             )}
 
           </form>
