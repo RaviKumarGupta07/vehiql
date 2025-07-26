@@ -11,6 +11,7 @@ const isProtectedRoute = createRouteMatcher([
 // Create Arcjet middleware
 const aj = arcjet({
   key: process.env.ARCJET_KEY,
+  ignore: ["/api/ping"], // ✅ UptimeRobot ke liye allowed
   // characteristics: ["userId"], // Track based on Clerk userId
   rules: [
     // Shield protection for content and security
